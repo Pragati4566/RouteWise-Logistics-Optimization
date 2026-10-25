@@ -1,162 +1,309 @@
-# 🚚 AI-Powered Last-Mile Delivery Optimization Platform
+# RouteWise — AI-Powered Last-Mile Delivery Optimization
 
-[![Live Demo](https://img.shields.io/badge/Live%20Demo-Streamlit-FF4B4B?logo=streamlit&logoColor=white)](https://ai-last-mile-delivery-optimization.streamlit.app/)
+RouteWise is an end-to-end logistics optimization platform that combines **mathematical optimization, machine learning, predictive analytics, and interactive visualization** to support cost-efficient last-mile delivery planning.
 
-An end-to-end logistics optimization platform combining **mathematical
-optimization (Gurobi, IBM CPLEX, SCIP, CBC via PuLP + Google OR-Tools)**,
-**machine learning**, and **interactive analytics** to plan
-cost-minimizing, time-window-feasible delivery routes for a last-mile
-fleet — built around a synthetic Atlanta delivery network (100 customers,
-15 trucks, 1 depot).
+The platform models a synthetic delivery network based on Atlanta, with customer locations, a central depot, vehicle capacity constraints, and delivery time windows. It combines exact optimization methods for smaller benchmark problems with scalable routing techniques for larger delivery scenarios.
 
-## 🎯 Objectives
+Alongside route optimization, RouteWise includes demand forecasting, travel-time prediction, multi-solver benchmarking, scenario analysis, and an interactive dashboard for evaluating operational trade-offs.
 
-- Optimize vehicle routing under capacity and time-window constraints
-- Reduce delivery distance and total operating cost
-- Improve fleet utilization and support scenario/sensitivity analysis
-- Forecast demand and predict travel time to support planning decisions
-- Compare exact solver backends (commercial vs. open-source) on the
-  same formulation
-- Provide an interactive dashboard for exploring trade-offs
+## Key Features
 
-## ✅ Implemented Features
+- **Vehicle Routing Optimization:** Plans delivery routes while accounting for vehicle capacity and customer time windows.
+- **Multi-Solver Benchmarking:** Compares Gurobi, IBM CPLEX, SCIP, and CBC using a common mathematical formulation.
+- **Scalable Routing:** Uses Google OR-Tools and guided local search for larger vehicle-routing scenarios.
+- **Demand Forecasting:** Compares XGBoost, Random Forest, and Linear Regression for package-volume prediction.
+- **Travel-Time Prediction:** Evaluates regression models to estimate journey duration under varying traffic conditions.
+- **Scenario Analysis:** Examines how fleet size affects total delivery cost and optimization feasibility.
+- **Interactive Route Visualization:** Displays vehicle routes and stop-level delivery information on maps.
+- **Operational KPI Dashboard:** Summarizes delivery distance, cost, vehicle utilization, and solver runtime.
+- **Automated Testing:** Validates routing constraints, delivery coverage, solver consistency, and ML model behavior.
 
-- **Exact CVRPTW solve (Gurobi)** — full mixed-integer formulation
-  (arc variables, capacity constraints, time windows) solved to proven
-  near-optimality on a small instance
-- **Multi-solver comparison (Gurobi / IBM CPLEX / SCIP / CBC)** — the
-  same CVRPTW formulation built once in PuLP and run against four
-  solver backends — two commercial (Gurobi, CPLEX), two free/open-source
-  (SCIP, CBC) — to compare license limits and solve speed on identical
-  problems. All four converge to the same optimal cost; solve time is
-  where they differ (CPLEX/Gurobi < 0.2s, SCIP < 1s, CBC ~11s on the
-  benchmark instance)
-- **Large-scale CVRPTW solve (OR-Tools)** — the full 100-stop / 6-truck
-  instance solved in seconds via constraint programming + guided local
-  search
-- **Vehicle routing with capacity constraints and delivery time windows**
-- **Demand forecasting with model comparison** — XGBoost, Random
-  Forest, and Linear Regression, selectable in the dashboard; 14-day-
-  ahead package volume forecast, backtested MAPE ~5% (XGBoost/RF)
-- **Travel-time prediction with model comparison** — Random Forest,
-  Gradient Boosting, and Linear Regression, selectable in the
-  dashboard; replaces the flat-speed assumption with a model that
-  captures rush-hour congestion (R² ~0.97 for tree-based models vs.
-  ~0.88 for the linear baseline)
-- **Interactive route maps (Folium)** — colored per-truck routes with
-  stop-level popups (priority, package weight, time window)
-- **Scenario / sensitivity analysis** — re-solves across a range of
-  fleet sizes to chart the cost-vs-fleet-size trade-off; surfaces
-  infeasible fleet sizes explicitly (with the reason) rather than
-  silently dropping them
-- **KPI dashboard (Streamlit + Plotly)** — trucks used, total distance,
-  total cost, solve time
-- **Unit tests (pytest)** — capacity feasibility and full-coverage
-  checks for both routing solvers, cross-solver optimal-cost agreement,
-  plus sanity checks on all ML models
+## System Architecture
 
-## 🚀 Possible Next Steps
+RouteWise is organized into five main components:
 
-- Stochastic demand / chance-constrained formulation
-- Split-delivery VRP extension
-- Robust optimization against travel-time uncertainty
-- Real historical order data in place of the synthetic generator
-- Multi-depot routing
-- Live traffic API integration for the travel-time model
+1. **Data Generation:** Creates synthetic customer, vehicle, and depot datasets.
+2. **Optimization Engine:** Constructs and solves vehicle-routing and assignment problems.
+3. **Machine Learning Models:** Predicts demand and travel times using alternative regression algorithms.
+4. **Visualization Layer:** Generates route maps and interactive analytical views.
+5. **Testing and Evaluation:** Checks optimization feasibility, compares solver outputs, and validates model behavior.
 
-## 🛠 Tech Stack
+This separation keeps the data, optimization, prediction, visualization, and evaluation workflows modular.
 
-**Optimization:** Gurobi Optimizer, IBM CPLEX, SCIP, PuLP, Google OR-Tools
-**ML:** scikit-learn, XGBoost
-**Data:** Python, Pandas, NumPy
-**App & Visualization:** Streamlit, Plotly, Folium
-**Testing:** pytest
+## Optimization Engine
 
-## 📁 Project Structure
+### 1. Capacitated Vehicle Routing with Time Windows
 
-```
-ai-last-mile-delivery-optimization/
-├── app.py                          # Streamlit dashboard (entry point)
+The core optimization problem is the Capacitated Vehicle Routing Problem with Time Windows (CVRPTW).
+
+The model aims to minimize delivery cost while satisfying operational constraints, including:
+
+- Vehicle capacity limits.
+- Customer delivery time windows.
+- Valid route connectivity and vehicle-flow constraints.
+- Customer visit and delivery-coverage requirements.
+- Fleet availability and depot-related routing constraints.
+
+The mathematical formulation uses decision variables to represent vehicle movement between locations. The objective and constraints are constructed to produce feasible delivery plans.
+
+### 2. Exact Optimization
+
+For smaller benchmark instances, the platform uses a mixed-integer programming formulation solved with Gurobi.
+
+The formulation represents vehicle movements using arc variables and incorporates routing, capacity, and time-window constraints. Exact optimization provides a benchmark for evaluating solution quality on instances that are computationally manageable.
+
+### 3. Multi-Solver Comparison
+
+The same CVRPTW formulation can be evaluated using four solver backends:
+
+- Gurobi
+- IBM CPLEX
+- SCIP
+- CBC
+
+The comparison examines solution cost, feasibility, and execution time under a consistent mathematical formulation.
+
+On the current small benchmark instance, the solver runs have produced matching optimal costs, while runtime differs across backends. The observed execution times are approximately below 0.2 seconds for Gurobi and CPLEX, below one second for SCIP, and around 11 seconds for CBC.
+
+These timings are environment-dependent and should be remeasured when hardware, solver configurations, or problem instances change.
+
+### 4. Large-Scale Routing with Google OR-Tools
+
+For larger delivery scenarios, the platform uses Google OR-Tools with constraint programming and guided local search.
+
+This approach focuses on finding high-quality feasible routes efficiently. Unlike an exact solver, a heuristic search does not necessarily prove that the returned solution is globally optimal.
+
+Using both approaches makes it possible to compare solution quality against benchmark instances while retaining a practical routing approach for larger scenarios.
+
+### 5. Fleet Assignment Baseline
+
+A separate assignment model provides a simpler baseline for assigning customers to vehicles under capacity constraints.
+
+This supports comparison between basic assignment decisions and more detailed route-level optimization.
+
+## Machine Learning and Predictive Analytics
+
+### Demand Forecasting
+
+The demand-prediction module compares three regression approaches:
+
+- XGBoost
+- Random Forest
+- Linear Regression
+
+It supports 14-day-ahead package-volume forecasting and enables the models to be compared using backtesting metrics.
+
+In the current synthetic-data evaluation, the tree-based models have achieved an approximate Mean Absolute Percentage Error (MAPE) of 5%.
+
+MAPE measures prediction error as a percentage of actual values. Results depend on the dataset, forecast horizon, and evaluation methodology.
+
+### Travel-Time Prediction
+
+The travel-time module compares:
+
+- Random Forest
+- Gradient Boosting
+- Linear Regression
+
+The goal is to estimate journey duration more realistically than a constant-speed assumption, enabling travel-time estimates to account for patterns represented in the input features.
+
+On the current evaluation setup, the tree-based models have achieved an approximate R² of 0.97, compared with approximately 0.88 for the linear baseline.
+
+R² measures how much variation in the target variable is explained by a model. These results are specific to the available dataset and should not be interpreted as guaranteed real-world traffic prediction accuracy.
+
+Both predictive modules allow alternative models to be evaluated using a consistent workflow.
+
+## Scenario Analysis and Operational KPIs
+
+RouteWise includes scenario analysis to investigate the relationship between fleet size and delivery cost.
+
+The platform can re-evaluate routing under different fleet configurations and visualize the resulting cost-versus-fleet-size trade-off.
+
+Infeasible configurations are surfaced explicitly, along with the associated reason where available, rather than being silently omitted.
+
+The dashboard summarizes operational metrics such as:
+
+- Total delivery distance.
+- Estimated operating cost.
+- Number of vehicles used.
+- Optimization runtime.
+- Feasibility across fleet configurations.
+
+These metrics help compare routing strategies and understand the operational trade-offs involved in delivery planning.
+
+## Interactive Dashboard
+
+The application is built with Streamlit and Plotly, with Folium providing route-map visualization.
+
+The dashboard supports exploration of model predictions, optimization outputs, and scenario comparisons.
+
+Route maps display vehicle-specific paths with stop-level details such as delivery priority, package weight, and delivery time windows.
+
+The visualization layer is intended to make optimization outcomes easier to inspect and compare, rather than relying only on numerical solver output.
+
+## Technology Stack
+
+**Programming and Data Processing**
+- Python
+- Pandas
+- NumPy
+
+**Mathematical Optimization**
+- Google OR-Tools
+- PuLP
+- Gurobi
+- IBM CPLEX
+- SCIP
+- CBC
+
+**Machine Learning**
+- scikit-learn
+- XGBoost
+
+**Application and Visualization**
+- Streamlit
+- Plotly
+- Folium
+
+**Testing**
+- pytest
+
+## Project Structure
+
+```text
+RouteWise/
+├── app.py
 ├── data/
-│   ├── generate_data.py            # Synthetic customers/trucks/depot generator
+│   ├── generate_data.py
 │   ├── customers.csv
-│   ├── trucks.csv                  # 6-truck fleet
+│   ├── trucks.csv
 │   └── depot.csv
 ├── optimization/
-│   ├── vrp_model.py                # Exact CVRPTW MIP (Gurobi)
-│   ├── multi_solver_vrp.py         # Same CVRPTW MIP via PuLP — Gurobi/CPLEX/SCIP/CBC
-│   ├── ortools_solver.py           # Full-scale CVRPTW (OR-Tools)
-│   ├── constraints.py              # Degree/flow/capacity/time-window constraint builders
-│   ├── objective.py                # Cost objective builders
-│   └── assignment_model.py         # Simpler customer-to-truck bin-packing baseline (Gurobi)
+│   ├── vrp_model.py
+│   ├── multi_solver_vrp.py
+│   ├── ortools_solver.py
+│   ├── constraints.py
+│   ├── objective.py
+│   └── assignment_model.py
 ├── models/
-│   ├── demand_prediction.py        # XGBoost / Random Forest / Linear demand forecast
-│   └── travel_time_model.py        # Random Forest / Gradient Boosting / Linear travel-time model
+│   ├── demand_prediction.py
+│   └── travel_time_model.py
 ├── visualization/
-│   └── route_map.py                # Folium route map builder
+│   └── route_map.py
 ├── tests/
-│   └── test_optimizer.py           # pytest suite
+│   └── test_optimizer.py
 ├── notebooks/
-│   └── prototype.ipynb             # exploratory notebook
-├── test_gurobi.py                  # Gurobi install/license smoke test
+│   └── prototype.ipynb
+├── test_gurobi.py
 └── requirements.txt
 ```
 
-## ▶️ Running the project
+## Getting Started
+
+### Prerequisites
+
+- Python 3.10 or a compatible version supported by the dependencies.
+- pip.
+- A compatible optimization solver for the solver-specific workflows.
+- Valid commercial solver access where required for Gurobi or CPLEX.
+
+### Installation
+
+Clone your project repository and move into its directory.
+
+```bash
+git clone YOUR_REPOSITORY_URL
+cd YOUR_REPOSITORY_DIRECTORY
+```
+
+Create and activate a virtual environment.
+
+**macOS/Linux**
+
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+```
+
+**Windows**
+
+```bash
+python -m venv .venv
+.venv\Scripts\activate
+```
+
+Install the dependencies.
 
 ```bash
 pip install -r requirements.txt
+```
 
-# Regenerate the synthetic instance (optional — CSVs are already committed)
-python data/generate_data.py
+### Run the Application
 
-# Exact small-instance solve (Gurobi only)
-python optimization/vrp_model.py
+Launch the interactive dashboard:
 
-# Exact small-instance solve, compare all 4 solver backends
-python optimization/multi_solver_vrp.py
-
-# Full-scale solve (OR-Tools)
-python optimization/ortools_solver.py
-
-# Demand forecast model comparison
-python models/demand_prediction.py
-
-# Travel-time model comparison
-python models/travel_time_model.py
-
-# Interactive dashboard
+```bash
 streamlit run app.py
+```
 
-# Tests
+### Run Individual Components
+
+Generate a new synthetic delivery dataset:
+
+```bash
+python data/generate_data.py
+```
+
+Run the exact optimization model:
+
+```bash
+python optimization/vrp_model.py
+```
+
+Compare solver backends:
+
+```bash
+python optimization/multi_solver_vrp.py
+```
+
+Run large-scenario routing:
+
+```bash
+python optimization/ortools_solver.py
+```
+
+Evaluate demand forecasting:
+
+```bash
+python models/demand_prediction.py
+```
+
+Evaluate travel-time prediction:
+
+```bash
+python models/travel_time_model.py
+```
+
+Run the automated tests:
+
+```bash
 pytest tests/test_optimizer.py -v
 ```
 
-## Why more than one solver?
+Some workflows require specific solver installations or valid solver access. Their setup should be verified independently before execution.
 
-Gurobi's and CPLEX's free size-limited licenses cap a model at roughly
-1,000–2,000 variables. A full three-index CVRPTW formulation for 100
-customers × 15 trucks needs roughly 151,500 arc variables — vastly over
-both limits. So this project uses two complementary strategies:
+## Testing and Validation
 
-1. **Exact solve on a small instance, across four backends.**
-   `multi_solver_vrp.py` builds one formulation in PuLP and solves it
-   with Gurobi, CPLEX, SCIP, and CBC. All four agree on the same
-   optimal cost — confirming the formulation itself is correct,
-   independent of solver — while differing meaningfully in speed
-   (commercial solvers fastest, free CBC solver slowest but still
-   correct).
-2. **Heuristic solve on the full-scale instance.** `ortools_solver.py`
-   solves the full 100-stop / 15-truck problem in seconds using
-   constraint programming + guided local search, trading a formal
-   optimality guarantee for the ability to solve at production scale.
+The automated tests cover important functional and mathematical properties of the optimization engine.
 
-That's the same exact-vs-heuristic trade-off production routing
-systems (e.g., UPS's ORION) make: exact solvers validate quality on
-tractable benchmarks; fast metaheuristics run the real daily routing.
+Current checks include:
 
-## 📌 Status
+- Vehicle-capacity feasibility.
+- Delivery-coverage validation.
+- Agreement between exact solvers on a common benchmark.
+- Routing-solver validation.
+- Basic sanity checks for the machine-learning models.
 
-Core optimization (single- and multi-solver), forecasting with model
-comparison, and dashboard functionality complete. See "Possible Next
-Steps" for planned extensions.
+These checks help identify invalid routes, inconsistent optimization outputs, and unexpected model behavior.
+
+A successful test run does not by itself establish real-world performance. Solver benchmarks
